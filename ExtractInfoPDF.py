@@ -10,6 +10,11 @@ import pandas as pd
 import os 
 import glob
 
+#functions 
+def most_common(lst,thrs):
+    lst_aux = [x for x in lst if x>thrs] 
+    return max(set(lst_aux), key=lst_aux.count)
+
 #list of files to be imported
 files = glob.glob(os.path.join(os.getcwd(),"*.pdf"))
 
@@ -26,6 +31,7 @@ for file in files:
     
     #initializing empty lists
     dim_new = []
+    dim_hint=[]
     ULS = []
     SLS= []
     drg = []
@@ -36,15 +42,21 @@ for file in files:
     for i in range(pdfdoc.numPages):
         page_one= pdfdoc.getPage(i).extractText().replace(",",".").upper()
         #extract data from string
-        dim_new.append(" ".join(re.findall(r'CORROSION PROTECTION ITEM(.*?)\+',page_one, flags = re.DOTALL)))
+        aux_var = " ".join(re.findall(r'CORROSION PROTECTION ITEM(.*?)\+',page_one, flags = re.DOTALL))
+        dim_new.append(" ".join(re.findall(r'\d{2,3}\.\d+|\d{2,3}',aux_var)))
         ULS.append(" ".join(re.findall(r'(?=ULTIMATE)(.*?)\n',page_one)))
         SLS.append(" ".join(re.findall(r'(?=SERVICE)(.*?)\n',page_one)))
         drg.append(" ".join(re.findall(r'193-\d{4}-\d{4}\.\d{0,1}',page_one)))
         naming.append(" ".join(re.findall(r'HM1-P\d\d?\d?',page_one)))
         bearing.append(" ".join(re.findall(r'(?=TYPE)(.*?)(?=\))',page_one, flags = re.DOTALL)))
+   
+    #extract maximum, most frequent (above a certain threshold), and last from dim_new
+    for d in dim_new:
+        list_f = list(map(float, d.split()))
+        dim_hint.append(" ".join([str(list_f[-1]),str(max(list_f)),str(most_common(list_f,100))]))
     
     #manage numeric data in dataframes
-    di = {'SLS':SLS,'ULS':ULS,"Dim":dim_new}#,"Type":bearing, "Drg":drg}
+    di = {'SLS':SLS,'ULS':ULS,"Dim_hint":dim_hint,"Dim":dim_new}#,"Type":bearing, "Drg":drg}
     df = pd.DataFrame(di)
     a=[]
     for column in df:
